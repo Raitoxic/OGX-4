@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, getStoredToken } from '../services/api';
+import { api, apiUrl, getStoredToken } from '../services/api';
 import type { TaskDetail } from '../types/hai';
 
 interface LiveProgress {
@@ -36,7 +36,9 @@ export function useTaskStream({ taskId, onSyncRequired, onSnapshot, onToast }: U
     const token = getStoredToken();
     if (!token) return;
 
-    const url = `/api/tasks/${encodeURIComponent(taskId)}/stream?token=${encodeURIComponent(token)}`;
+    const url = apiUrl(
+      `/api/tasks/${encodeURIComponent(taskId)}/stream?token=${encodeURIComponent(token)}`,
+    );
     const es = new EventSource(url);
 
     es.onopen = () => setConnected(true);

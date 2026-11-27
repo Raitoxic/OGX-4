@@ -4,7 +4,7 @@
     {
       "model_version": "vyrox_sup_logistic_regression_20261127_104712",
       "algorithm": "logistic_regression",
-      "artifact_path": "/Users/nishithrai/OGX-4/ml/models/vyrox_sup_logistic_regression_20261127_104712.joblib",
+      "artifact_path": "ml/models/vyrox_sup_logistic_regression_20261127_104712.joblib",
       "dataset_version": "synthetic_supervision_v1",
       "dataset_provenance": "SYNTHETIC_DEMO_DATASET",
       "test_f1_macro": 0.8302,

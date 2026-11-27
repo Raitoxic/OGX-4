@@ -18,6 +18,7 @@ from ml.inference.predictor import supervision_predictor
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    settings.validate_production_config()
     sse_broker.set_loop(asyncio.get_running_loop())
     init_db()
     recover_orphaned_running_tasks()

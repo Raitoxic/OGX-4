@@ -314,6 +314,7 @@ def run_training_pipeline(
     stamp = version_tag or datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     model_version = f"vyrox_sup_{best_algo}_{stamp}"
     artifact_path = MODELS_DIR / f"{model_version}.joblib"
+    rel_artifact_path = f"ml/models/{artifact_path.name}"
 
     bundle = {
         "model": winning_model,
@@ -341,7 +342,7 @@ def run_training_pipeline(
         "selected_model": {
             "model_version": model_version,
             "algorithm": best_algo,
-            "artifact_path": str(artifact_path),
+            "artifact_path": rel_artifact_path,
             "best_params": best_params_map[best_algo],
             "training_time_sec": training_times[best_algo],
             "inference_latency": latency,
@@ -386,7 +387,7 @@ def run_training_pipeline(
         {
             "model_version": model_version,
             "algorithm": best_algo,
-            "artifact_path": str(artifact_path),
+            "artifact_path": rel_artifact_path,
             "dataset_version": ds_meta["dataset_version"],
             "dataset_provenance": ds_meta["dataset_provenance"],
             "test_f1_macro": test_selected_metrics["f1_macro"],
