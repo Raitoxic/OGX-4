@@ -13,22 +13,34 @@ ML_DIR = PROJECT_ROOT / "ml"
 load_dotenv(PROJECT_ROOT / ".env")
 load_dotenv(BACKEND_DIR / ".env")
 
+DEFAULT_DEV_JWT_SECRET = "vyrox-dev-secret-change-in-production"
+
+
+def normalize_database_url(raw_url: str, default_sqlite: str) -> str:
+    url = raw_url.strip()
+    if not url:
+        return default_sqlite
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg2://" + url[len("postgres://"):]
+    if url.startswith("postgresql://") and "+psycopg2" not in url and "+asyncpg" not in url:
+        return "postgresql+psycopg2://" + url[len("postgresql://"):]
+    if url.startswith("sqlite:///./"):
+        rel_path = url.replace("sqlite:///./", "", 1)
+        return f"sqlite:///{(BACKEND_DIR / rel_path).as_posix()}"
+    return url
+
 
 class Settings:
-    """Environment-driven configuration for VYRO-X."""
+    """Environment-driven configuration for VYRO-X with strict production safety guards."""
 
     def __init__(self) -> None:
+        self.environment = os.getenv("ENVIRONMENT", "development").strip().lower()
         default_sqlite = f"sqlite:///{(BACKEND_DIR / 'vyrox.db').as_posix()}"
         raw_db_url = os.getenv("DATABASE_URL", "").strip()
-        if not raw_db_url:
-            self.database_url = default_sqlite
-        elif raw_db_url.startswith("sqlite:///./"):
-            rel_path = raw_db_url.replace("sqlite:///./", "", 1)
-            self.database_url = f"sqlite:///{(BACKEND_DIR / rel_path).as_posix()}"
-        else:
-            self.database_url = raw_db_url
+        self.raw_database_url = raw_db_url
+        self.database_url = normalize_database_url(raw_db_url, default_sqlite)
 
-        self.jwt_secret_key = os.getenv("JWT_SECRET_KEY", "vyrox-dev-secret-change-in-production")
+        self.jwt_secret_key = os.getenv("JWT_SECRET_KEY", DEFAULT_DEV_JWT_SECRET)
         self.jwt_algorithm = "HS256"
         self.access_token_expire_minutes = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
 
@@ -47,6 +59,24 @@ class Settings:
 
         self.demo_step_stage_delay_sec = float(os.getenv("DEMO_STEP_STAGE_DELAY_SEC", "0.75"))
         self.llm_timeout_sec = float(os.getenv("LLM_TIMEOUT_SEC", "45.0"))
+
+    def validate_production_config(self) -> None:
+        """
+        Enforces strict production invariants:
+        - Never silently fall back to SQLite in production.
+        - Never allow default/short JWT secrets in production.
+        """
+        if self.environment != "production":
+            return
+        if not self.raw_database_url or self.database_url.startswith("sqlite"):
+            raise RuntimeError(
+                "ENVIRONMENT=production requires a PostgreSQL DATABASE_URL. "
+                "Silent fallback to SQLite is disabled in production."
+            )
+        if not self.jwt_secret_key or self.jwt_secret_key == DEFAULT_DEV_JWT_SECRET or len(self.jwt_secret_key) < 32:
+            raise RuntimeError(
+                "ENVIRONMENT=production requires a strong JWT_SECRET_KEY (minimum 32 characters, not the dev default)."
+            )
 
     @property
     def active_provider_info(self) -> Tuple[str, str]:

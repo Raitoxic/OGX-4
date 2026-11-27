@@ -37,10 +37,16 @@ class SupervisionPredictor:
             entry = next((v for v in reg.get("versions", []) if v["model_version"] == active_ver), None)
             if not entry:
                 return False
-            artifact = Path(entry["artifact_path"])
-            if not artifact.exists():
+            raw_path = entry["artifact_path"]
+            project_root = ML_ROOT.parent
+            candidate = Path(raw_path)
+            if not candidate.is_absolute():
+                candidate = project_root / candidate
+            if not candidate.exists():
+                candidate = ML_ROOT / "models" / Path(raw_path).name
+            if not candidate.exists():
                 return False
-            self._bundle = joblib.load(artifact)
+            self._bundle = joblib.load(candidate)
             self._loaded_version = active_ver
             return True
         except Exception:

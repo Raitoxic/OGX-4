@@ -326,3 +326,56 @@ def test_backend_restart_orphan_recovery() -> None:
         assert recovered["status"] == TaskStatus.INTERRUPTED
         assert recovered["steps"][0]["status"] == StepStatus.COMPLETED
         assert recovered["steps"][1]["status"] == StepStatus.INTERRUPTED
+
+
+def test_production_config_guards_and_portable_ml_model() -> None:
+    import pytest as _pytest
+    from backend.core.config import Settings, normalize_database_url
+    from ml.inference.predictor import SupervisionPredictor
+
+    # 1. URL normalization for managed Postgres providers
+    assert normalize_database_url("postgres://u:p@host:5432/db", "sqlite:///x").startswith("postgresql+psycopg2://")
+    assert normalize_database_url("postgresql://u:p@host:5432/db", "sqlite:///x").startswith("postgresql+psycopg2://")
+
+    # 2. Production mode MUST refuse silent SQLite fallback & weak JWT secret
+    old_env = os.environ.get("ENVIRONMENT")
+    old_db = os.environ.get("DATABASE_URL")
+    old_jwt = os.environ.get("JWT_SECRET_KEY")
+    try:
+        os.environ["ENVIRONMENT"] = "production"
+        os.environ["DATABASE_URL"] = "sqlite:///./vyrox.db"
+        os.environ["JWT_SECRET_KEY"] = "a" * 40
+        with _pytest.raises(RuntimeError, match="PostgreSQL"):
+            Settings().validate_production_config()
+
+        os.environ["DATABASE_URL"] = "postgres://u:p@db.internal:5432/vyrox"
+        os.environ["JWT_SECRET_KEY"] = "short"
+        with _pytest.raises(RuntimeError, match="JWT_SECRET_KEY"):
+            Settings().validate_production_config()
+
+        os.environ["JWT_SECRET_KEY"] = "b" * 48
+        Settings().validate_production_config()  # Valid production config passes
+    finally:
+        if old_env is None:
+            os.environ.pop("ENVIRONMENT", None)
+        else:
+            os.environ["ENVIRONMENT"] = old_env
+        if old_db is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = old_db
+        if old_jwt is None:
+            os.environ.pop("JWT_SECRET_KEY", None)
+        else:
+            os.environ["JWT_SECRET_KEY"] = old_jwt
+
+    # 3. Portable ML model loads from relative registry path and distinguishes all 3 modes
+    p = SupervisionPredictor()
+    assert p.reload() is True
+    r_high = p.predict({"prev_approvals": 25, "prev_rejections": 0, "user_corrections": 0, "interruptions_count": 0, "manual_step_edits": 0, "task_complexity": 0.2, "task_risk_level": 0, "prev_completion_rate": 0.98, "intervention_frequency": 0.1, "historical_recovery_rate": 0.99})
+    r_mid = p.predict({"prev_approvals": 8, "prev_rejections": 1, "user_corrections": 2, "interruptions_count": 1, "manual_step_edits": 2, "task_complexity": 0.5, "task_risk_level": 1, "prev_completion_rate": 0.80, "intervention_frequency": 1.2, "historical_recovery_rate": 0.80})
+    r_sup = p.predict({"prev_approvals": 1, "prev_rejections": 6, "user_corrections": 7, "interruptions_count": 5, "manual_step_edits": 6, "task_complexity": 0.95, "task_risk_level": 2, "prev_completion_rate": 0.45, "intervention_frequency": 4.5, "historical_recovery_rate": 0.40})
+    assert r_high["recommended_autonomy"] == "higher_autonomy"
+    assert r_mid["recommended_autonomy"] == "balanced"
+    assert r_sup["recommended_autonomy"] == "supervised"
+

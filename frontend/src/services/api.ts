@@ -20,6 +20,12 @@ import type {
 
 const TOKEN_KEY = 'vyrox_auth_token';
 
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+
+export function apiUrl(path: string): string {
+  return `${API_BASE_URL}${path}`;
+}
+
 export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -50,7 +56,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(path, { ...options, headers });
+  const res = await fetch(apiUrl(path), { ...options, headers });
   if (!res.ok) {
     let detail = `Request failed (${res.status})`;
     try {
