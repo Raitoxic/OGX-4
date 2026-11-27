@@ -1,0 +1,157 @@
+:root {
+  /* Light Theme — Crisp Architectural Surfaces */
+  --bg-primary: #ffffff;
+  --bg-sidebar: #fafafa;
+  --bg-surface: #f4f4f6;
+  --bg-elevated: #ffffff;
+  --bg-hover: #ededf0;
+
+  --text-primary: #111113;
+  --text-secondary: #52525b;
+  --text-tertiary: #71717a;
+
+  --accent-blue: #2563eb;
+  --accent-blue-hover: #1d4ed8;
+  --accent-ring: rgba(37, 99, 235, 0.25);
+
+  --border-subtle: rgba(17, 17, 19, 0.09);
+  --border-strong: rgba(17, 17, 19, 0.16);
+  --glass-bg: rgba(255, 255, 255, 0.84);
+  --glass-border: rgba(17, 17, 19, 0.08);
+}
+
+.dark {
+  /* Dark Theme — Linear / Raycast Precision Charcoal */
+  --bg-primary: #09090b;
+  --bg-sidebar: #0d0d10;
+  --bg-surface: #121216;
+  --bg-elevated: #16161b;
+  --bg-hover: #1e1e26;
+
+  --text-primary: #f4f4f6;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+
+  --accent-blue: #3b82f6;
+  --accent-blue-hover: #60a5fa;
+  --accent-ring: rgba(59, 130, 246, 0.32);
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --glass-bg: rgba(9, 9, 11, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.08);
+}
+
+html {
+  scroll-behavior: smooth;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.apple-glass {
+  background: var(--glass-bg);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.apple-display {
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  font-weight: 600;
+}
+
+.apple-headline {
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  font-weight: 600;
+}
+
+.apple-subhead {
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+}
+
+/* Primary & Secondary Restrained Action Buttons */
+.apple-pill-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 8px;
+  background-color: var(--accent-blue);
+  color: #ffffff;
+  font-weight: 500;
+  transition: background-color 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+}
+
+.apple-pill-primary:hover {
+  background-color: var(--accent-blue-hover);
+}
+
+.apple-pill-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.apple-pill-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background-color: transparent;
+  color: var(--text-primary);
+  font-weight: 500;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.apple-pill-secondary:hover {
+  background-color: var(--bg-hover);
+}
+
+.vyrox-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+}
+
+.vyrox-grid-bg {
+  background-image: linear-gradient(to right, var(--border-subtle) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border-subtle) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Precision thin scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(113, 113, 122, 0.28);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(113, 113, 122, 0.48);
+}

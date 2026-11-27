@@ -1,0 +1,440 @@
+{
+  "trained_at": "2026-11-27T10:47:12.956687+00:00",
+  "random_seed": 42,
+  "selection_metric": "f1_macro",
+  "dataset": {
+    "dataset_version": "synthetic_supervision_v1",
+    "dataset_provenance": "SYNTHETIC_DEMO_DATASET",
+    "sample_count": 1800,
+    "class_distribution": {
+      "balanced": 828,
+      "supervised": 504,
+      "higher_autonomy": 468
+    },
+    "missing_cells": 309,
+    "sha256_hash": "a83d366195dff8715bc4ec87cf16ead398b7b485b4a0bb99147411475098f91c",
+    "file_path": "/Users/nishithrai/OGX-4/ml/data/synthetic_supervision_v1.csv",
+    "validation": {
+      "valid": true,
+      "row_count": 1800,
+      "class_distribution": {
+        "balanced": 828,
+        "supervised": 504,
+        "higher_autonomy": 468
+      },
+      "missing_rates": {
+        "prev_approvals": 0.0139,
+        "prev_rejections": 0.0194,
+        "user_corrections": 0.0183,
+        "interruptions_count": 0.0156,
+        "manual_step_edits": 0.0239,
+        "task_complexity": 0.0161,
+        "task_risk_level": 0.0,
+        "prev_completion_rate": 0.0244,
+        "intervention_frequency": 0.0206,
+        "historical_recovery_rate": 0.0194
+      },
+      "warnings": []
+    }
+  },
+  "splits": {
+    "train_count": 1260,
+    "validation_count": 270,
+    "test_count": 270,
+    "leakage_verified": true
+  },
+  "selected_model": {
+    "model_version": "vyrox_sup_logistic_regression_20261127_104712",
+    "algorithm": "logistic_regression",
+    "artifact_path": "/Users/nishithrai/OGX-4/ml/models/vyrox_sup_logistic_regression_20261127_104712.joblib",
+    "best_params": {
+      "clf__C": 1.0
+    },
+    "training_time_sec": 2.131,
+    "inference_latency": {
+      "mean_ms": 0.605,
+      "p95_ms": 0.643,
+      "runs": 150
+    },
+    "feature_importances": {
+      "task_risk_level": 1.5499,
+      "prev_completion_rate": 0.8225,
+      "intervention_frequency": 0.8216,
+      "interruptions_count": 0.7473,
+      "risk_x_complexity": 0.7399,
+      "reliability_deficit": 0.7297,
+      "rejection_ratio": 0.5478,
+      "user_corrections": 0.3946,
+      "manual_step_edits": 0.2336,
+      "correction_intensity": 0.2216,
+      "prev_rejections": 0.2021,
+      "historical_recovery_rate": 0.197,
+      "prev_approvals": 0.1856,
+      "stability_index": 0.1744,
+      "task_complexity": 0.115
+    }
+  },
+  "validation_results": {
+    "rule_based_baseline": {
+      "accuracy": 0.4778,
+      "precision_macro": 0.6461,
+      "recall_macro": 0.4775,
+      "f1_macro": 0.407,
+      "roc_auc_ovr": null,
+      "classes": [
+        "supervised",
+        "balanced",
+        "higher_autonomy"
+      ],
+      "confusion_matrix": [
+        [
+          68,
+          7,
+          0
+        ],
+        [
+          70,
+          55,
+          0
+        ],
+        [
+          14,
+          50,
+          6
+        ]
+      ],
+      "class_report": {
+        "supervised": {
+          "precision": 0.4474,
+          "recall": 0.9067,
+          "f1_score": 0.5991,
+          "support": 75
+        },
+        "balanced": {
+          "precision": 0.4911,
+          "recall": 0.44,
+          "f1_score": 0.4641,
+          "support": 125
+        },
+        "higher_autonomy": {
+          "precision": 1.0,
+          "recall": 0.0857,
+          "f1_score": 0.1579,
+          "support": 70
+        }
+      }
+    },
+    "logistic_regression": {
+      "accuracy": 0.8333,
+      "precision_macro": 0.8308,
+      "recall_macro": 0.8476,
+      "f1_macro": 0.8375,
+      "roc_auc_ovr": 0.9549,
+      "classes": [
+        "supervised",
+        "balanced",
+        "higher_autonomy"
+      ],
+      "confusion_matrix": [
+        [
+          65,
+          10,
+          0
+        ],
+        [
+          12,
+          97,
+          16
+        ],
+        [
+          0,
+          7,
+          63
+        ]
+      ],
+      "class_report": {
+        "supervised": {
+          "precision": 0.8442,
+          "recall": 0.8667,
+          "f1_score": 0.8553,
+          "support": 75
+        },
+        "balanced": {
+          "precision": 0.8509,
+          "recall": 0.776,
+          "f1_score": 0.8117,
+          "support": 125
+        },
+        "higher_autonomy": {
+          "precision": 0.7975,
+          "recall": 0.9,
+          "f1_score": 0.8456,
+          "support": 70
+        }
+      },
+      "cv_best_f1_macro": 0.8122,
+      "training_time_sec": 2.131
+    },
+    "random_forest": {
+      "accuracy": 0.7963,
+      "precision_macro": 0.8054,
+      "recall_macro": 0.801,
+      "f1_macro": 0.7997,
+      "roc_auc_ovr": 0.9313,
+      "classes": [
+        "supervised",
+        "balanced",
+        "higher_autonomy"
+      ],
+      "confusion_matrix": [
+        [
+          55,
+          20,
+          0
+        ],
+        [
+          8,
+          98,
+          19
+        ],
+        [
+          0,
+          8,
+          62
+        ]
+      ],
+      "class_report": {
+        "supervised": {
+          "precision": 0.873,
+          "recall": 0.7333,
+          "f1_score": 0.7971,
+          "support": 75
+        },
+        "balanced": {
+          "precision": 0.7778,
+          "recall": 0.784,
+          "f1_score": 0.7809,
+          "support": 125
+        },
+        "higher_autonomy": {
+          "precision": 0.7654,
+          "recall": 0.8857,
+          "f1_score": 0.8212,
+          "support": 70
+        }
+      },
+      "cv_best_f1_macro": 0.8029,
+      "training_time_sec": 2.186
+    },
+    "gradient_boosting": {
+      "accuracy": 0.7889,
+      "precision_macro": 0.7974,
+      "recall_macro": 0.79,
+      "f1_macro": 0.7916,
+      "roc_auc_ovr": 0.9256,
+      "classes": [
+        "supervised",
+        "balanced",
+        "higher_autonomy"
+      ],
+      "confusion_matrix": [
+        [
+          53,
+          22,
+          0
+        ],
+        [
+          11,
+          99,
+          15
+        ],
+        [
+          0,
+          9,
+          61
+        ]
+      ],
+      "class_report": {
+        "supervised": {
+          "precision": 0.8281,
+          "recall": 0.7067,
+          "f1_score": 0.7626,
+          "support": 75
+        },
+        "balanced": {
+          "precision": 0.7615,
+          "recall": 0.792,
+          "f1_score": 0.7765,
+          "support": 125
+        },
+        "higher_autonomy": {
+          "precision": 0.8026,
+          "recall": 0.8714,
+          "f1_score": 0.8356,
+          "support": 70
+        }
+      },
+      "cv_best_f1_macro": 0.7762,
+      "training_time_sec": 6.089
+    }
+  },
+  "test_evaluation": {
+    "selected_model": {
+      "accuracy": 0.8259,
+      "precision_macro": 0.8231,
+      "recall_macro": 0.841,
+      "f1_macro": 0.8302,
+      "roc_auc_ovr": 0.9546,
+      "classes": [
+        "supervised",
+        "balanced",
+        "higher_autonomy"
+      ],
+      "confusion_matrix": [
+        [
+          69,
+          7,
+          0
+        ],
+        [
+          16,
+          94,
+          14
+        ],
+        [
+          0,
+          10,
+          60
+        ]
+      ],
+      "class_report": {
+        "supervised": {
+          "precision": 0.8118,
+          "recall": 0.9079,
+          "f1_score": 0.8571,
+          "support": 76
+        },
+        "balanced": {
+          "precision": 0.8468,
+          "recall": 0.7581,
+          "f1_score": 0.8,
+          "support": 124
+        },
+        "higher_autonomy": {
+          "precision": 0.8108,
+          "recall": 0.8571,
+          "f1_score": 0.8333,
+          "support": 70
+        }
+      }
+    },
+    "logistic_regression_baseline": {
+      "accuracy": 0.8259,
+      "precision_macro": 0.8231,
+      "recall_macro": 0.841,
+      "f1_macro": 0.8302,
+      "roc_auc_ovr": 0.9546,
+      "classes": [
+        "supervised",
+        "balanced",
+        "higher_autonomy"
+      ],
+      "confusion_matrix": [
+        [
+          69,
+          7,
+          0
+        ],
+        [
+          16,
+          94,
+          14
+        ],
+        [
+          0,
+          10,
+          60
+        ]
+      ],
+      "class_report": {
+        "supervised": {
+          "precision": 0.8118,
+          "recall": 0.9079,
+          "f1_score": 0.8571,
+          "support": 76
+        },
+        "balanced": {
+          "precision": 0.8468,
+          "recall": 0.7581,
+          "f1_score": 0.8,
+          "support": 124
+        },
+        "higher_autonomy": {
+          "precision": 0.8108,
+          "recall": 0.8571,
+          "f1_score": 0.8333,
+          "support": 70
+        }
+      }
+    },
+    "rule_based_baseline": {
+      "accuracy": 0.463,
+      "precision_macro": 0.6431,
+      "recall_macro": 0.4624,
+      "f1_macro": 0.3676,
+      "roc_auc_ovr": null,
+      "classes": [
+        "supervised",
+        "balanced",
+        "higher_autonomy"
+      ],
+      "confusion_matrix": [
+        [
+          72,
+          4,
+          0
+        ],
+        [
+          73,
+          51,
+          0
+        ],
+        [
+          19,
+          49,
+          2
+        ]
+      ],
+      "class_report": {
+        "supervised": {
+          "precision": 0.439,
+          "recall": 0.9474,
+          "f1_score": 0.6,
+          "support": 76
+        },
+        "balanced": {
+          "precision": 0.4904,
+          "recall": 0.4113,
+          "f1_score": 0.4474,
+          "support": 124
+        },
+        "higher_autonomy": {
+          "precision": 1.0,
+          "recall": 0.0286,
+          "f1_score": 0.0556,
+          "support": 70
+        }
+      }
+    },
+    "delta_vs_rule_baseline": {
+      "f1_macro_delta": 0.4626,
+      "accuracy_delta": 0.3629,
+      "recall_macro_delta": 0.3786
+    }
+  },
+  "limitations": [
+    "Model trained and evaluated on a synthetic demonstration dataset (SYNTHETIC_DEMO_DATASET), not real-world users.",
+    "Predictions serve strictly as advisory supervision recommendations and never override manual user controls, locked steps, or mandatory high-risk approval gates.",
+    "Future production validation requires collecting consented, explicitly labelled human supervision preference logs."
+  ]
+}

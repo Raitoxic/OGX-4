@@ -1,0 +1,22 @@
+# Python
+backend/.venv/
+__pycache__/
+*.py[cod]
+*.db
+*.db-shm
+*.db-wal
+.pytest_cache/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+.vite/
+
+# Environment
+.env
+backend/.env
+frontend/.env
+
+# OS / IDE
+.DS_Store
+*.log

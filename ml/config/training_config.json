@@ -1,0 +1,27 @@
+{
+  "random_seed": 42,
+  "dataset_version": "synthetic_supervision_v1",
+  "dataset_provenance": "SYNTHETIC_DEMO_DATASET",
+  "n_samples": 1800,
+  "missing_value_rate": 0.02,
+  "splits": {
+    "train": 0.70,
+    "validation": 0.15,
+    "test": 0.15
+  },
+  "cv_folds": 5,
+  "classes": ["supervised", "balanced", "higher_autonomy"],
+  "raw_features": [
+    "prev_approvals",
+    "prev_rejections",
+    "user_corrections",
+    "interruptions_count",
+    "manual_step_edits",
+    "task_complexity",
+    "task_risk_level",
+    "prev_completion_rate",
+    "intervention_frequency",
+    "historical_recovery_rate"
+  ],
+  "selection_metric": "f1_macro"
+}
