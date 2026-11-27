@@ -15,6 +15,7 @@ import type {
   ArtifactRevision,
   ArtifactSection,
   ArtifactSectionDiff,
+  ExecutionStep,
   TaskDetail,
 } from '../types/hai';
 
@@ -181,6 +182,107 @@ const MarkdownBlock: React.FC<{ content: string }> = ({ content }) => {
   }
 
   return <div>{elements}</div>;
+};
+
+const OutputMetrics: React.FC<{ step?: ExecutionStep }> = ({ step }) => {
+  const started = step?.started_at ? new Date(step.started_at) : null;
+  const completed = step?.completed_at ? new Date(step.completed_at) : null;
+  const durationMs =
+    step?.duration_ms && step.duration_ms > 0
+      ? step.duration_ms
+      : started && completed
+        ? completed.getTime() - started.getTime()
+        : null;
+  const totalSec = durationMs != null ? durationMs / 1000 : null;
+  const exceedsTarget = totalSec != null && totalSec > 20;
+  const sources = step?.sources ?? [];
+  const fmtTime = (d: Date | null) => (d ? d.toLocaleTimeString() : '—');
+
+  return (
+    <div className="mt-3 space-y-2 rounded-xl border border-apple-border bg-apple-surface p-3 text-[11.5px]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <span className="font-semibold text-apple-ink">Output Time Sequence</span>
+        <span className="text-apple-secondary">
+          Start: <span className="text-apple-ink">{fmtTime(started)}</span>
+        </span>
+        <span className="text-apple-secondary">
+          Completed: <span className="text-apple-ink">{fmtTime(completed)}</span>
+        </span>
+        <span className="text-apple-secondary">
+          Total response time:{' '}
+          <span
+            className={
+              exceedsTarget
+                ? 'font-semibold text-amber-700 dark:text-amber-300'
+                : 'font-semibold text-apple-ink'
+            }
+          >
+            {totalSec != null ? `${totalSec.toFixed(2)}s` : '—'}
+          </span>
+        </span>
+        {totalSec != null && (
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10.5px] font-medium ${
+              exceedsTarget
+                ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300'
+                : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+            }`}
+          >
+            {exceedsTarget
+              ? `Exceeded 20s target (actual ${totalSec.toFixed(2)}s)`
+              : 'Within 20s target'}
+          </span>
+        )}
+      </div>
+
+      <div>
+        <p className="font-semibold text-apple-ink">References ({sources.length})</p>
+        {sources.length === 0 ? (
+          <p className="text-apple-secondary">No references recorded for this output.</p>
+        ) : (
+          <ul className="mt-1 space-y-1">
+            {sources.map((s, i) => {
+              const isUrl = /^https?:\/\//i.test(s.reference || '');
+              return (
+                <li key={i} className="flex flex-wrap items-center gap-1.5 text-apple-secondary">
+                  <span className="font-medium text-apple-ink">{s.title}</span>
+                  <span className="text-apple-tertiary">({s.type})</span>
+                  {isUrl ? (
+                    <a
+                      href={s.reference}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-apple-blue hover:underline"
+                    >
+                      {s.reference}
+                    </a>
+                  ) : s.reference ? (
+                    <span className="text-apple-tertiary">{s.reference}</span>
+                  ) : null}
+                  {s.reliability_note && (
+                    <span className="text-apple-tertiary">— {s.reliability_note}</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-semibold text-apple-ink">Output Accuracy:</span>
+        <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10.5px] font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+          Accuracy not verified
+        </span>
+        {step?.confidence_basis && (
+          <span className="text-apple-secondary">
+            Estimated confidence (not measured):{' '}
+            <span className="text-apple-ink">{step.confidence_basis}</span>
+          </span>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export const SharedArtifactPanel: React.FC<SharedArtifactPanelProps> = ({
@@ -504,6 +606,9 @@ export const SharedArtifactPanel: React.FC<SharedArtifactPanelProps> = ({
                     <MarkdownBlock content={sec.current_content} />
                   </div>
                 )}
+
+                {/* Output Time Sequence, References & Accuracy (additive, real data only) */}
+                <OutputMetrics step={linkedStep} />
 
                 {/* Inline AI vs Human Diff View */}
                 {diff && (

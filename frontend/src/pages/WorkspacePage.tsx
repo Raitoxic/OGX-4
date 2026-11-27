@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FolderOpen, Plus, Sparkles, X } from 'lucide-react';
+import { AlertTriangle, FolderOpen, Plus, Sparkles, X } from 'lucide-react';
 import { ModeBanner } from '../components/ModeBanner';
 import { useAuth } from '../context/AuthContext';
 import { useTaskStream } from '../hooks/useTaskStream';
@@ -288,12 +288,85 @@ export const WorkspacePage: React.FC = () => {
           </button>
         </div>
 
+        <p className="text-[13.5px] text-apple-secondary">
+          Guide, steer, and supervise the agent — inspect the live plan, interrupt mid-execution, and roll back at any time.
+        </p>
+
         {/* Honest AI / Demo Mode Disclosure */}
         <ModeBanner
           providerMode={activeTask?.provider_mode}
           providerName={activeTask?.provider_name}
           compact={Boolean(activeTask)}
         />
+
+        {activeTask && (
+          <div className="space-y-3">
+            {/* Completed-vs-Total Progress Bar */}
+            <div className="rounded-xl border border-apple-border bg-apple-surface px-4 py-3">
+              <div className="mb-1.5 flex items-center justify-between text-[12px] font-medium text-apple-secondary">
+                <span>Plan Progress</span>
+                <span>
+                  {activeTask.completed_steps_count}/{activeTask.total_steps_count} steps · {activeTask.progress_percent}%
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-apple-elevated">
+                <div
+                  className="h-full rounded-full bg-apple-blue transition-all"
+                  style={{ width: `${activeTask.progress_percent}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Prominent Approval Gate */}
+            {activeTask.status === 'AWAITING_APPROVAL' && (
+              <div className="rounded-xl border-2 border-amber-500 bg-amber-50 px-4 py-3 dark:bg-amber-950/30">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-200">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    <span>Your approval is required to continue</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMobilePane('plan')}
+                      className="rounded-full border border-amber-500/40 bg-white px-4 py-1.5 text-[13px] font-medium text-amber-800 transition hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-100"
+                    >
+                      Review Plan
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyAction === 'approve'}
+                      onClick={() =>
+                        runAction('approve', async () => {
+                          const updated = await api.approveTask(activeTask.id, { auto_continue: true });
+                          setActiveTask(updated);
+                        })
+                      }
+                      className="rounded-full bg-emerald-600 px-4 py-1.5 text-[13px] font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {busyAction === 'approve' ? 'Approving...' : 'Approve & Continue'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Active Constraints as Chips */}
+            {activeTask.additional_instructions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[12px] font-medium text-apple-secondary">Active Constraints:</span>
+                {activeTask.additional_instructions.map((ins) => (
+                  <span
+                    key={ins.id}
+                    className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
+                  >
+                    {ins.text}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Toast Alert */}
         {toast && (

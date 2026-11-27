@@ -157,3 +157,6 @@ cd frontend && npm run build
 - **Deterministic Demo Mode:** When `OPENAI_API_KEY` and `GEMINI_API_KEY` are unset, generation uses the clearly labelled local deterministic research engine (`vyrox-deterministic-v1`).
 - **Synthetic ML Dataset:** The Adaptive Supervision Prediction Model is trained on `synthetic_supervision_v1` (`SYNTHETIC_DEMO_DATASET`) and has not yet been validated on consented real-world user populations.
 - **Statistical Power:** Two-group SciPy statistical tests (`Welch's t-test`, `Mann-Whitney U`, `Cohen's d`) require `n >= 2` recorded sessions in both VYRO-X and Baseline groups; below that threshold, the UI explicitly reports insufficient observations.
+
+
+h5
