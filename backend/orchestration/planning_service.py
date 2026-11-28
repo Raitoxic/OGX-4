@@ -33,6 +33,7 @@ async def create_task_and_generate_plan(
     interaction_mode: str = "vyrox",
     autonomy_mode: Optional[str] = None,
     adaptive_enabled: Optional[bool] = None,
+    research_enabled: bool = False,
 ) -> Task:
     provider = get_agent_provider()
     topic = extract_topic(prompt)
@@ -58,6 +59,8 @@ async def create_task_and_generate_plan(
         plan_approved=not user.require_plan_approval,
         current_step_index=0,
         current_activity="Interpreting task prompt...",
+        research_enabled=research_enabled,
+        research_status="disabled" if not research_enabled else "pending",
     )
     db.add(task)
     db.flush()

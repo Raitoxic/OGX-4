@@ -47,6 +47,7 @@ export const WorkspacePage: React.FC = () => {
   const [newAutonomy, setNewAutonomy] = useState<AutonomyMode>(
     user?.default_autonomy_mode || 'balanced',
   );
+  const [newResearch, setNewResearch] = useState(false);
   const [creatingTask, setCreatingTask] = useState(false);
 
   const [checkpointsOpen, setCheckpointsOpen] = useState(false);
@@ -219,11 +220,13 @@ export const WorkspacePage: React.FC = () => {
         title: newTitle.trim() || undefined,
         interaction_mode: 'vyrox',
         autonomy_mode: newAutonomy,
+        research_enabled: newResearch,
       });
       setActiveTask(created);
       await loadTasksList();
       setNewPrompt('');
       setNewTitle('');
+      setNewResearch(false);
       setShowNewTaskModal(false);
       navigate(`/workspace/${created.id}`);
       pushToast('Structured execution plan generated. Inspect, edit, lock, or approve to begin.', 'success');
@@ -707,6 +710,24 @@ export const WorkspacePage: React.FC = () => {
                   <option value="higher_autonomy">Higher Autonomy — Streamlined (High-risk gated)</option>
                 </select>
               </div>
+
+              <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-apple-border bg-apple-bg px-3.5 py-3">
+                <input
+                  type="checkbox"
+                  checked={newResearch}
+                  onChange={(e) => setNewResearch(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-[#0071E3]"
+                />
+                <span>
+                  <span className="block text-[13px] font-medium text-apple-ink">
+                    Enable research-driven generation
+                  </span>
+                  <span className="block text-[11.5px] text-apple-secondary">
+                    Retrieve academic papers & technical sources and ground the output in them with transparent,
+                    verifiable references. Skip for simple coding, formatting, or calculation tasks.
+                  </span>
+                </span>
+              </label>
 
               <div className="flex justify-end gap-2 pt-2">
                 <button

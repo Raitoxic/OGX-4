@@ -72,6 +72,7 @@ async def create_task(
         interaction_mode=payload.interaction_mode,
         autonomy_mode=payload.autonomy_mode,
         adaptive_enabled=payload.adaptive_enabled,
+        research_enabled=payload.research_enabled,
     )
     return serialize_task_detail(task)
 

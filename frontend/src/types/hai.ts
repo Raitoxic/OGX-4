@@ -54,6 +54,28 @@ export interface StepSource {
   type: string;
   reference: string;
   reliability_note: string;
+  authors?: string | null;
+  year?: number | string | null;
+  venue?: string | null;
+  doi?: string | null;
+  url?: string | null;
+  provider?: string | null;
+  access_status?: string | null;
+  used?: boolean | null;
+  abstract?: string | null;
+}
+
+export type CitationStyle = 'ieee' | 'apa' | 'simple';
+
+export type ClaimSupport = 'evidence_backed' | 'partial' | 'unverified' | 'stale' | 'no_research';
+
+export interface Claim {
+  index: number;
+  text: string;
+  support: ClaimSupport;
+  support_label: string;
+  ref_numbers: number[];
+  supporting_passage: string;
 }
 
 export interface ExecutionStep {
@@ -98,6 +120,7 @@ export interface ArtifactSection {
   version: number;
   has_user_edits: boolean;
   updated_at: string | null;
+  claims?: Claim[];
 }
 
 export interface ArtifactDiffLine {
@@ -198,6 +221,14 @@ export interface TaskSummary {
   recovery_count: number;
   plan_edits_count: number;
   total_execution_ms: number;
+  research_enabled: boolean;
+  research_status: string;
+  research_duration_ms: number | null;
+  research_used_count: number;
+  research_retrieved_count: number;
+  research_used: StepSource[];
+  research_retrieved: StepSource[];
+  citation_style: CitationStyle;
   created_at: string | null;
   updated_at: string | null;
   completed_at: string | null;

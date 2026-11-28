@@ -60,6 +60,18 @@ class Settings:
         self.demo_step_stage_delay_sec = float(os.getenv("DEMO_STEP_STAGE_DELAY_SEC", "0.75"))
         self.llm_timeout_sec = float(os.getenv("LLM_TIMEOUT_SEC", "45.0"))
 
+        # Research engine (OFF by default; per-task flag can enable it).
+        self.research_enabled = os.getenv("RESEARCH_ENABLED", "false").strip().lower() in ("1", "true", "yes")
+        self.research_providers = [
+            p.strip().lower()
+            for p in os.getenv("RESEARCH_PROVIDERS", "openalex,crossref,arxiv").split(",")
+            if p.strip()
+        ]
+        self.research_max_sources = int(os.getenv("RESEARCH_MAX_SOURCES", "5"))
+        self.research_timeout_sec = float(os.getenv("RESEARCH_TIMEOUT_SEC", "8.0"))
+        self.research_max_bytes = int(os.getenv("RESEARCH_MAX_BYTES", "2000000"))
+        self.research_per_provider_limit = int(os.getenv("RESEARCH_PER_PROVIDER_LIMIT", "5"))
+
     def validate_production_config(self) -> None:
         """
         Enforces strict production invariants:
