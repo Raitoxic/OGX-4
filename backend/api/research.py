@@ -37,10 +37,21 @@ class CitationStyleRequest(BaseModel):
 @router.post("/preview")
 async def preview_research(
     payload: ResearchPreviewRequest,
-    _user: User = Depends(get_current_user_and_token),
-    _db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_and_token),
+    db: Session = Depends(get_db),
 ) -> dict:
     bundle = await research_service.run(payload.prompt, bool(payload.enabled))
+    if bundle.status == "completed":
+        from backend.research.retrieval_log import log_retrieval
+
+        backend = "semantic" if "semantic" in bundle.providers else "lexical"
+        log_retrieval(
+            db,
+            bundle.query or payload.prompt,
+            backend,
+            bundle.used + bundle.retrieved,
+            top_score=0.0,
+        )
     return {
         "status": bundle.status,
         "reason": bundle.reason,

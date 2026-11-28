@@ -176,43 +176,100 @@ class DeterministicDemoProvider(AgentProvider):
         additional_instructions: List[str],
     ) -> List[PlannedStepSpec]:
         t = topic or extract_topic(prompt)
-        directive_summary = replan_reason.strip() or (
-            additional_instructions[-1] if additional_instructions else "Refined user requirements"
-        )
+        directive = (additional_instructions[-1] if additional_instructions else "") or replan_reason.strip() or "Refined user requirements"
+        directive_l = directive.lower()
         preserved_titles = [s["title"] for s in locked_or_completed_steps]
-        updated: List[PlannedStepSpec] = []
 
         if not unlocked_pending_steps:
             return []
 
+        # Decide which pending step to remove (only when the user asks to replace
+        # a general/benefits section). Never touch completed/locked steps.
+        remove_idx = None
+        if "replace" in directive_l or "remove" in directive_l:
+            for idx, s in enumerate(unlocked_pending_steps):
+                title_l = s["title"].lower()
+                if any(k in title_l for k in ("benefit", "general", "overview", "introduction")):
+                    remove_idx = idx
+                    break
+
+        revised: List[PlannedStepSpec] = []
+        modified_done = False
         for idx, existing in enumerate(unlocked_pending_steps):
-            new_title = existing["title"]
-            if idx == 0 and "Targeted" not in new_title:
-                new_title = f"{existing['title']} (Replanned)"
-            updated.append(
-                PlannedStepSpec(
-                    title=new_title,
-                    description=(
-                        f"{existing['description']} "
-                        f"[Replanned Focus]: Explicitly address '{directive_summary}' for '{t}', "
-                        f"while maintaining continuity with preserved steps ({', '.join(preserved_titles[:3]) or 'none'})."
-                    ),
-                    rationale=f"Updated during user-requested replan to incorporate: '{directive_summary}'.",
-                    expected_outcome=f"{existing['expected_outcome']} Revised to integrate '{directive_summary}'.",
-                    risk_level=existing.get("risk_level", "medium"),
-                    confidence_basis="Deterministic Demo Mode — replanned cleanly around locked/completed steps.",
-                    uncertainty_notes="Replanned scope reflects latest human directives; inspect before approving.",
-                    sources=existing.get("sources") or [
-                        {
-                            "title": "Human Replan Directive",
-                            "type": "user_input",
-                            "reference": directive_summary[:120],
-                            "reliability_note": "Direct user steering input.",
-                        }
-                    ],
+            if idx == remove_idx:
+                # Genuinely removed from the plan (API marks it removed/not executed).
+                continue
+            step_key = existing["step_order"]
+            if not modified_done:
+                # Modify the first remaining pending step to carry the new focus.
+                modified_done = True
+                revised.append(
+                    PlannedStepSpec(
+                        title=f"{existing['title']} (Revised)",
+                        description=(
+                            f"{existing['description']} "
+                            f"REVISED REQUIREMENT: {directive} "
+                            f"Continuity with preserved steps: {', '.join(preserved_titles[:3]) or 'none'}."
+                        ),
+                        rationale=f"Replanned to incorporate the user's new instruction: '{directive}'.",
+                        expected_outcome=f"Addresses '{directive}' instead of the previous general scope.",
+                        risk_level=existing.get("risk_level", "medium"),
+                        confidence_basis="Deterministic Demo Mode — genuinely replanned around completed steps.",
+                        uncertainty_notes="Revised scope reflects the latest human directive; verify before approving.",
+                        sources=[
+                            {
+                                "title": "Human Replan Directive",
+                                "type": "user_input",
+                                "reference": directive[:120],
+                                "reliability_note": "Direct user steering input.",
+                            }
+                        ],
+                        step_key=step_key,
+                        replan_change="modified",
+                    )
                 )
+            else:
+                revised.append(
+                    PlannedStepSpec(
+                        title=existing["title"],
+                        description=existing["description"],
+                        rationale=existing.get("rationale", "Unchanged pending step."),
+                        expected_outcome=existing["expected_outcome"],
+                        risk_level=existing.get("risk_level", "medium"),
+                        confidence_basis="Deterministic Demo Mode — unchanged pending step.",
+                        uncertainty_notes="",
+                        sources=existing.get("sources") or [],
+                        step_key=step_key,
+                        replan_change="unchanged",
+                    )
+                )
+
+        # Add a genuinely new step that produces the requested detailed comparison.
+        revised.append(
+            PlannedStepSpec(
+                title="Detailed Comparison & Analysis",
+                description=(
+                    f"Produce a detailed, evidence-grounded comparison specifically addressing: {directive}. "
+                    f"Cover each requested dimension explicitly and contrast alternatives."
+                ),
+                rationale="New step added during replan to satisfy the user's revised requirement.",
+                expected_outcome=f"A comparison section that directly answers '{directive}'.",
+                risk_level="medium",
+                confidence_basis="Deterministic Demo Mode — added step from user directive.",
+                uncertainty_notes="Newly added scope; verify coverage before approving.",
+                sources=[
+                    {
+                        "title": "Human Replan Directive",
+                        "type": "user_input",
+                        "reference": directive[:120],
+                        "reliability_note": "Direct user steering input.",
+                    }
+                ],
+                step_key=None,
+                replan_change="added",
             )
-        return updated
+        )
+        return revised
 
     async def propose_alternative_step(
         self,

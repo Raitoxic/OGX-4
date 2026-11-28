@@ -167,6 +167,7 @@ def serialize_step(step: ExecutionStep) -> Dict[str, Any]:
         "user_edit_note": step.user_edit_note,
         "rejected_reason": step.rejected_reason,
         "revision_number": step.revision_number,
+        "replan_change": step.replan_change or "",
         "duration_ms": step.duration_ms,
         "started_at": step.started_at.isoformat() if step.started_at else None,
         "completed_at": step.completed_at.isoformat() if step.completed_at else None,

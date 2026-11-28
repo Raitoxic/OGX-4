@@ -8,7 +8,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
-from backend.api import analytics, artifacts, auth, checkpoints, evaluation, ml, research, steps, stream, tasks
+from backend.api import (
+    analytics,
+    artifacts,
+    auth,
+    checkpoints,
+    datasets,
+    evaluation,
+    ml,
+    research,
+    steps,
+    stream,
+    tasks,
+)
 from backend.core.config import settings
 from backend.database.init_db import init_db
 from backend.execution.runner import recover_orphaned_running_tasks
@@ -69,6 +81,7 @@ app.include_router(analytics.router)
 app.include_router(evaluation.router)
 app.include_router(ml.router)
 app.include_router(research.router)
+app.include_router(datasets.router)
 
 
 @app.get("/api/health", tags=["System"])

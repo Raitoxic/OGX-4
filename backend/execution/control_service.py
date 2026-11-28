@@ -417,6 +417,9 @@ def add_instruction_to_task(db: Session, task: Task, user: User, instruction_tex
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Instruction cannot be empty.")
 
     instructions = json.loads(task.additional_instructions_json or "[]")
+    # Prevent duplicate instructions: skip if identical to the most recent one.
+    if instructions and str(instructions[-1].get("text", "")).strip().lower() == cleaned.lower():
+        return instructions[-1]
     entry = {
         "id": str(uuid.uuid4()),
         "text": cleaned,

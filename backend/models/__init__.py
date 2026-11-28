@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from backend.models.artifact import ArtifactRevision, ArtifactSection
 from backend.models.checkpoint import Checkpoint
+from backend.models.dataset import (
+    ChunkEmbedding,
+    DatasetRecord,
+    DatasetSource,
+    DatasetSplit,
+    RetrievalLog,
+)
 from backend.models.ml_registry import (
     MLDataset,
     MLEvaluationResult,
@@ -38,4 +45,9 @@ __all__ = [
     "MLPredictionLog",
     "PdfDocument",
     "PdfChunk",
+    "DatasetSource",
+    "DatasetRecord",
+    "DatasetSplit",
+    "ChunkEmbedding",
+    "RetrievalLog",
 ]

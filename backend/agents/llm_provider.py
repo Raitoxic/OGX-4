@@ -128,8 +128,10 @@ class LiveLLMProvider(AgentProvider):
     ) -> List[PlannedStepSpec]:
         sys_prompt = (
             "You are VYRO-X replanning ONLY unlocked pending steps. Never alter locked or completed steps. "
-            "Return ONLY a JSON array with the exact same count of updated pending steps using keys: "
-            "title, description, rationale, expected_outcome, risk_level, confidence_basis, uncertainty_notes, sources."
+            "Return ONLY a JSON array of updated/new pending steps using keys: "
+            "title, description, rationale, expected_outcome, risk_level, confidence_basis, uncertainty_notes, sources. "
+            "Optionally include 'step_key' (the step_order of the existing step you are revising; omit for a brand-new step) "
+            "and 'replan_change' ('modified' or 'added'). You may add or remove pending steps to satisfy the new instructions."
         )
         usr_prompt = json.dumps(
             {
@@ -155,6 +157,8 @@ class LiveLLMProvider(AgentProvider):
                 confidence_basis=str(item.get("confidence_basis", f"Live AI ({self.provider_name}) replan")),
                 uncertainty_notes=str(item.get("uncertainty_notes", "")),
                 sources=item.get("sources") if isinstance(item.get("sources"), list) else [],
+                step_key=item.get("step_key") if isinstance(item.get("step_key"), int) else None,
+                replan_change=str(item.get("replan_change", "modified")),
             )
             for item in parsed
         ]

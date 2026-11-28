@@ -104,6 +104,7 @@ export interface ExecutionStep {
   user_edit_note: string;
   rejected_reason: string | null;
   revision_number: number;
+  replan_change?: string;
   duration_ms: number;
   started_at: string | null;
   completed_at: string | null;

@@ -134,6 +134,21 @@ export const StepCard: React.FC<StepCardProps> = ({
               {step.step_order}
             </span>
             <h3 className="text-[14px] font-semibold leading-snug text-apple-ink">{step.title}</h3>
+            {step.replan_change === 'added' && (
+              <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9.5px] font-medium text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                Added
+              </span>
+            )}
+            {step.replan_change === 'modified' && (
+              <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[9.5px] font-medium text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                Modified
+              </span>
+            )}
+            {step.replan_change === 'removed' && (
+              <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[9.5px] font-medium text-red-700 line-through dark:bg-red-950/60 dark:text-red-300">
+                Removed
+              </span>
+            )}
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">

@@ -50,6 +50,19 @@ class Settings:
         self.auth_rate_limit_per_min = int(os.getenv("AUTH_RATE_LIMIT_PER_MIN", "60"))
         self.ml_retrain_rate_limit_per_min = int(os.getenv("ML_RETRAIN_RATE_LIMIT_PER_MIN", "6"))
 
+        # Embedding / semantic retrieval (optional; lexical fallback when unavailable)
+        self.embedding_backend = os.getenv("EMBEDDING_BACKEND", "auto").strip().lower()  # auto | pgvector | blob
+        self.embedding_model = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5").strip()
+        self.embedding_dim = int(os.getenv("EMBEDDING_DIM", "384"))
+        self.embedding_batch_size = int(os.getenv("EMBEDDING_BATCH_SIZE", "32"))
+
+        # Research dataset pipeline
+        self.dataset_dir = os.getenv("DATASET_DIR", str(BACKEND_DIR / "datasets")).strip()
+        self.dataset_export_dir = os.getenv("DATASET_EXPORT_DIR", str(BACKEND_DIR / "datasets" / "exports")).strip()
+        self.dataset_split_seed = int(os.getenv("DATASET_SPLIT_SEED", "42"))
+        self.dataset_chunk_chars = int(os.getenv("DATASET_CHUNK_CHARS", "1200"))
+        self.dataset_chunk_overlap = int(os.getenv("DATASET_CHUNK_OVERLAP", "200"))
+
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
         self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
         self.openai_base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").strip().rstrip("/")

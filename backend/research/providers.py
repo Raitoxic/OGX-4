@@ -253,6 +253,65 @@ async def search_local_pdf(query: str, limit: int) -> List[SourceRecord]:
 PROVIDERS["local_pdf"] = search_local_pdf
 
 
+async def search_semantic(query: str, limit: int) -> List[SourceRecord]:
+    """Embedding-based semantic retrieval over the local corpus.
+
+    Returns ``[]`` (never fabricated results) when the optional embedding model
+    is unavailable or no chunks have been indexed. Reuses the same
+    ``SourceRecord``/ranking pipeline as the lexical providers.
+    """
+    from backend.database.session import SessionLocal
+    from backend.models.dataset import ChunkEmbedding
+    from backend.models.pdf import PdfChunk, PdfDocument
+    from backend.research.embedding_service import embedding_service
+
+    if not embedding_service.available():
+        return []
+    qvec = embedding_service.embed_query(query)
+    if not qvec:
+        return []
+
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(ChunkEmbedding, PdfChunk, PdfDocument)
+            .join(PdfChunk, ChunkEmbedding.chunk_id == PdfChunk.id)
+            .join(PdfDocument, PdfChunk.document_id == PdfDocument.id)
+            .filter(ChunkEmbedding.embedding_model == embedding_service.model_name)
+            .limit(5000)
+            .all()
+        )
+        scored = []
+        for emb, chunk, doc in rows:
+            score = embedding_service.cosine(qvec, embedding_service.unpack(emb.vector))
+            if score > 0:
+                scored.append((score, chunk, doc))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        out: List[SourceRecord] = []
+        for score, chunk, doc in scored[:limit]:
+            out.append(
+                SourceRecord(
+                    title=doc.title or doc.filename,
+                    authors=doc.authors or "",
+                    year=doc.year or None,
+                    venue=doc.venue or "",
+                    doi=doc.doi or "",
+                    url="",
+                    provider="semantic",
+                    access_status="pdf_excerpt",
+                    abstract=chunk.content or "",
+                    filename=doc.filename,
+                    page=chunk.page,
+                )
+            )
+        return out
+    finally:
+        db.close()
+
+
+PROVIDERS["semantic"] = search_semantic
+
+
 async def run_providers(query: str, providers: List[str], limit: int) -> List[SourceRecord]:
     results: List[SourceRecord] = []
     for name in providers:

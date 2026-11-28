@@ -35,6 +35,12 @@ class PdfDocument(Base):
     chunk_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     status: Mapped[str] = mapped_column(String(16), default="indexed", nullable=False)  # indexed | failed
     error_message: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    # General corpus provenance (reused for non-PDF sources; PDF defaults apply).
+    source_type: Mapped[str] = mapped_column(String(24), default="local_pdf", nullable=False)
+    url: Mapped[str] = mapped_column(String(600), default="", nullable=False)
+    license_name: Mapped[str] = mapped_column(String(200), default="", nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    access_level: Mapped[str] = mapped_column(String(24), default="full_text", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     chunks = relationship(

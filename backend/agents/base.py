@@ -15,6 +15,10 @@ class PlannedStepSpec:
     confidence_basis: str
     uncertainty_notes: str
     sources: List[Dict[str, str]] = field(default_factory=list)
+    # Replan metadata: which existing step this revises (by step_order) and the
+    # change type ("added" | "modified" | "unchanged"). None step_key => new step.
+    step_key: Optional[int] = None
+    replan_change: str = ""
 
 
 @dataclass
