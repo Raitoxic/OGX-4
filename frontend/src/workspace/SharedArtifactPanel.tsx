@@ -201,6 +201,10 @@ const ACCESS_LABEL: Record<string, { label: string; tone: string }> = {
     label: 'Abstract accessed (not full text)',
     tone: 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
   },
+  pdf_excerpt: {
+    label: 'PDF excerpt accessed',
+    tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
+  },
   metadata_only: {
     label: 'Metadata only — not retrieved',
     tone: 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
@@ -234,7 +238,18 @@ const accessInfo = (s: StepSource): { label: string; tone: string } => {
 
 const isExternalRetrieved = (s: StepSource): boolean => {
   const k = (s.access_status || '').trim();
-  return k === 'retrieved_full' || k === 'retrieved_partial' || k === 'abstract_accessed';
+  return (
+    k === 'retrieved_full' ||
+    k === 'retrieved_partial' ||
+    k === 'abstract_accessed' ||
+    k === 'pdf_excerpt'
+  );
+};
+
+const locator = (s: StepSource): string => {
+  const fn = s.filename?.trim();
+  if (!fn) return '';
+  return s.page != null ? `${fn}, p. ${s.page}` : fn;
 };
 
 const formatCitation = (s: StepSource, n: number, style: CitationStyle): string => {
@@ -246,21 +261,23 @@ const formatCitation = (s: StepSource, n: number, style: CitationStyle): string 
   const url = s.url?.trim() || (/^https?:\/\//i.test(s.reference || '') ? s.reference.trim() : '');
   const doiLine = doi ? ` DOI: ${doi.startsWith('http') ? doi : `https://doi.org/${doi}`}.` : '';
   const urlLine = !doi && url ? ` Available: ${url}` : '';
+  const loc = locator(s);
+  const suffix = loc ? ` (${loc})` : '';
   if (style === 'ieee') {
     const a = authors ? `${authors}, ` : '';
     const v = venue ? `${venue}, ` : '';
     const y = year ? `${year}.` : '';
-    return `[${n}] ${a}"${title}," ${v}${y}${doiLine}${urlLine}`.replace(/\s+/g, ' ').trim();
+    return `[${n}] ${a}"${title}," ${v}${y}${doiLine}${urlLine}${suffix}`.replace(/\s+/g, ' ').trim();
   }
   if (style === 'apa') {
     const a = authors ? `${authors} ` : '';
     const y = year ? `(${year}). ` : '';
     const v = venue ? `${venue}. ` : '';
-    return `${a}${y}${title}. ${v}${doiLine}${urlLine}`.replace(/\s+/g, ' ').trim();
+    return `${a}${y}${title}. ${v}${doiLine}${urlLine}${suffix}`.replace(/\s+/g, ' ').trim();
   }
   const v = venue ? `${venue}, ` : '';
   const y = year ? `${year}.` : '';
-  return `[${n}] ${title}. ${v}${y}${doiLine}${urlLine}`.replace(/\s+/g, ' ').trim();
+  return `[${n}] ${title}. ${v}${y}${doiLine}${urlLine}${suffix}`.replace(/\s+/g, ' ').trim();
 };
 
 const OutputMetrics: React.FC<{
@@ -364,9 +381,15 @@ const OutputMetrics: React.FC<{
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${access.tone}`}>
                       {access.label}
                     </span>
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-                      Used
-                    </span>
+                    {isExternalRetrieved(s) && s.used !== false ? (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                        Used
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                        Not retrieved
+                      </span>
+                    )}
                   </div>
                   <details className="mt-1">
                     <summary className="cursor-pointer text-[10.5px] text-apple-tertiary hover:text-apple-ink">
@@ -377,6 +400,8 @@ const OutputMetrics: React.FC<{
                       {s.year != null && `${s.year}` !== '' && <div>Year: {s.year}</div>}
                       {s.venue && <div>Venue: {s.venue}</div>}
                       {s.provider && <div>Provider: {s.provider}</div>}
+                      {s.filename && <div>File: {s.filename}</div>}
+                      {s.page != null && <div>Page: {s.page}</div>}
                       {s.doi && (
                         <div>
                           DOI:{' '}
@@ -404,7 +429,7 @@ const OutputMetrics: React.FC<{
                         </div>
                       )}
                       {s.reliability_note && <div>Note: {s.reliability_note}</div>}
-                      {!s.authors && !s.year && !s.venue && !s.doi && !s.provider && (
+                      {!s.authors && !s.year && !s.venue && !s.doi && !s.provider && !s.filename && (
                         <div className="text-apple-tertiary">
                           Author, year, venue, and DOI not available for this source.
                         </div>
@@ -425,6 +450,7 @@ const OutputMetrics: React.FC<{
                 <li key={i} className="text-[10.5px] text-apple-secondary">
                   • {s.title}
                   {s.provider ? ` — ${s.provider}` : ''}
+                  {locator(s) ? ` (${locator(s)})` : ''}
                 </li>
               ))}
             </ul>

@@ -64,7 +64,7 @@ class Settings:
         self.research_enabled = os.getenv("RESEARCH_ENABLED", "false").strip().lower() in ("1", "true", "yes")
         self.research_providers = [
             p.strip().lower()
-            for p in os.getenv("RESEARCH_PROVIDERS", "openalex,crossref,arxiv").split(",")
+            for p in os.getenv("RESEARCH_PROVIDERS", "local_pdf,openalex,crossref,arxiv").split(",")
             if p.strip()
         ]
         self.research_max_sources = int(os.getenv("RESEARCH_MAX_SOURCES", "5"))

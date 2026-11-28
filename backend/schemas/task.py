@@ -38,6 +38,8 @@ class StepSource(BaseModel):
     access_status: Optional[str] = None
     used: Optional[bool] = None
     abstract: Optional[str] = None
+    filename: Optional[str] = None
+    page: Optional[int] = None
 
 
 def normalize_sources(raw_json: str) -> List[Dict[str, Any]]:

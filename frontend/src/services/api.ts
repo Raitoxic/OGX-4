@@ -251,6 +251,34 @@ export const api = {
     return res.text();
   },
 
+  // Local PDF dataset
+  getPdfDocuments: () =>
+    request<{
+      documents: Array<{
+        id: string;
+        filename: string;
+        title: string | null;
+        authors: string | null;
+        year: string | null;
+        doi: string | null;
+        venue: string | null;
+        page_count: number;
+        chunk_count: number;
+        status: string;
+        error_message: string | null;
+      }>;
+      indexed_count: number;
+      total_count: number;
+      total_chunks: number;
+    }>('/api/research/pdfs'),
+  ingestPdfs: () =>
+    request<{
+      documents: unknown[];
+      indexed_count: number;
+      total_count: number;
+      total_chunks: number;
+    }>('/api/research/pdfs/ingest', { method: 'POST' }),
+
   // Analytics, Evaluation, Feedback & ML
   getAnalytics: () => request<AnalyticsData>('/api/analytics'),
   getEvaluation: () => request<EvaluationDashboardData>('/api/evaluation'),

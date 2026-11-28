@@ -31,6 +31,8 @@ class SourceRecord:
     access_status: str = "metadata_only"
     abstract: str = ""
     used: bool = False
+    filename: str = ""
+    page: Optional[int] = None
 
     def to_source_dict(self) -> Dict[str, Any]:
         return {
@@ -46,6 +48,8 @@ class SourceRecord:
             "provider": self.provider,
             "access_status": self.access_status,
             "used": self.used,
+            "filename": self.filename or None,
+            "page": self.page,
         }
 
 
@@ -187,7 +191,66 @@ PROVIDERS = {
     "openalex": search_openalex,
     "crossref": search_crossref,
     "arxiv": search_arxiv,
+    "local_pdf": None,  # populated below (DB-backed local corpus)
 }
+
+
+async def search_local_pdf(query: str, limit: int) -> List[SourceRecord]:
+    """Search the ingested local PDF corpus (DB-backed), returning page-level chunks.
+
+    Reuses the same ``SourceRecord``/ranking pipeline as remote providers. The
+    chunk text becomes the ``abstract`` so it flows into the generation context.
+    """
+    from sqlalchemy import or_
+
+    from backend.database.session import SessionLocal
+    from backend.models.pdf import PdfChunk, PdfDocument
+    from backend.research.pdf_ingest import ensure_ingested
+
+    tokens = [t for t in (query or "").lower().split() if t]
+    if not tokens:
+        return []
+    db = SessionLocal()
+    try:
+        ensure_ingested(db)
+        clauses = [PdfChunk.content.ilike(f"%{t}%") for t in tokens]
+        rows = (
+            db.query(PdfChunk, PdfDocument)
+            .join(PdfDocument, PdfChunk.document_id == PdfDocument.id)
+            .filter(or_(*clauses))
+            .limit(max(limit * 4, 8))
+            .all()
+        )
+        scored = []
+        for chunk, doc in rows:
+            hay = (chunk.content or "").lower()
+            score = sum(1 for t in tokens if t in hay)
+            if score > 0:
+                scored.append((score, chunk, doc))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        out: List[SourceRecord] = []
+        for _score, chunk, doc in scored[:limit]:
+            out.append(
+                SourceRecord(
+                    title=doc.title or doc.filename,
+                    authors=doc.authors or "",
+                    year=doc.year or None,
+                    venue=doc.venue or "",
+                    doi=doc.doi or "",
+                    url="",
+                    provider="local_pdf",
+                    access_status="pdf_excerpt",
+                    abstract=chunk.content or "",
+                    filename=doc.filename,
+                    page=chunk.page,
+                )
+            )
+        return out
+    finally:
+        db.close()
+
+
+PROVIDERS["local_pdf"] = search_local_pdf
 
 
 async def run_providers(query: str, providers: List[str], limit: int) -> List[SourceRecord]:

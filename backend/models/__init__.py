@@ -8,6 +8,7 @@ from backend.models.ml_registry import (
     MLModelVersion,
     MLPredictionLog,
 )
+from backend.models.pdf import PdfChunk, PdfDocument
 from backend.models.task import AgentPlan, ExecutionStep, Task
 from backend.models.telemetry import (
     AutonomySignal,
@@ -35,4 +36,6 @@ __all__ = [
     "MLModelVersion",
     "MLEvaluationResult",
     "MLPredictionLog",
+    "PdfDocument",
+    "PdfChunk",
 ]

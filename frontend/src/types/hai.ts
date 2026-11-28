@@ -63,6 +63,8 @@ export interface StepSource {
   access_status?: string | null;
   used?: boolean | null;
   abstract?: string | null;
+  filename?: string | null;
+  page?: number | null;
 }
 
 export type CitationStyle = 'ieee' | 'apa' | 'simple';
