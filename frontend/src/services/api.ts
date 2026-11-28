@@ -6,12 +6,14 @@ import type {
   AutonomyMode,
   CheckpointComparison,
   CheckpointItem,
+  CitationStyle,
   EvaluationDashboardData,
   ExecutionStep,
   InteractionEvent,
   InteractionMode,
   MLPredictionResponse,
   MLStatusResponse,
+  StepSource,
   SystemInfo,
   TaskDetail,
   TaskSummary,
@@ -111,6 +113,7 @@ export const api = {
     interaction_mode?: InteractionMode;
     autonomy_mode?: AutonomyMode;
     adaptive_enabled?: boolean;
+    research_enabled?: boolean;
   }) =>
     request<TaskDetail>('/api/tasks', {
       method: 'POST',
@@ -218,6 +221,35 @@ export const api = {
     request<ArtifactSectionDiff>(`/api/tasks/${taskId}/artifact/sections/${sectionId}/diff`),
   getSectionRevisions: (taskId: string, sectionId: string) =>
     request<{ revisions: ArtifactRevision[] }>(`/api/tasks/${taskId}/artifact/sections/${sectionId}/revisions`),
+
+  // Research provenance & citation style
+  getTaskResearch: (taskId: string) =>
+    request<{
+      task_id: string;
+      research_enabled: boolean;
+      status: string;
+      duration_ms: number | null;
+      used_count: number;
+      retrieved_count: number;
+      citation_style: CitationStyle;
+      used: StepSource[];
+      retrieved: StepSource[];
+    }>(`/api/research/task/${taskId}`),
+  setCitationStyle: (taskId: string, style: CitationStyle) =>
+    request<{ task_id: string; citation_style: CitationStyle }>(`/api/research/task/${taskId}/citation-style`, {
+      method: 'PATCH',
+      body: JSON.stringify({ style }),
+    }),
+  exportArtifactMarkdown: async (taskId: string): Promise<string> => {
+    const token = getStoredToken();
+    const res = await fetch(apiUrl(`/api/tasks/${taskId}/artifact/export`), {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!res.ok) {
+      throw new ApiError(`Export failed (${res.status})`, res.status);
+    }
+    return res.text();
+  },
 
   // Analytics, Evaluation, Feedback & ML
   getAnalytics: () => request<AnalyticsData>('/api/analytics'),

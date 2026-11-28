@@ -11,6 +11,52 @@ from backend.models.checkpoint import Checkpoint
 from backend.models.task import ExecutionStep, Task
 from backend.models.telemetry import InteractionEvent
 from backend.orchestration.state_machine import StepStatus
+from backend.research.claims import map_claims
+from backend.research.citations import normalize_style
+
+
+# ---- Source / Reference Schema (honest attribution; missing metadata stays empty) ----
+
+class StepSource(BaseModel):
+    """A single reference/source attached to a step.
+
+    Only ``title`` is conventionally present. Author/year/venue/DOI/provider and
+    access status are optional and must NEVER be fabricated — when unknown they
+    remain ``None`` so the UI can honestly display "Not available".
+    """
+
+    title: str = ""
+    type: str = ""
+    reference: str = ""
+    reliability_note: str = ""
+    authors: Optional[str] = None
+    year: Optional[Any] = None
+    venue: Optional[str] = None
+    doi: Optional[str] = None
+    url: Optional[str] = None
+    provider: Optional[str] = None
+    access_status: Optional[str] = None
+    used: Optional[bool] = None
+    abstract: Optional[str] = None
+
+
+def normalize_sources(raw_json: str) -> List[Dict[str, Any]]:
+    """Parse stored sources JSON into validated dicts with safe defaults.
+
+    Malformed or partial entries never raise; missing bibliographic metadata is
+    preserved as ``None`` rather than invented.
+    """
+    try:
+        raw = json.loads(raw_json or "[]")
+    except (ValueError, TypeError):
+        return []
+    if not isinstance(raw, list):
+        return []
+    normalized: List[Dict[str, Any]] = []
+    for item in raw:
+        if isinstance(item, dict):
+            normalized.append(StepSource(**item).model_dump())
+    return normalized
 
 
 # ---- Request Schemas ----
@@ -21,6 +67,7 @@ class CreateTaskRequest(BaseModel):
     interaction_mode: Literal["vyrox", "baseline", "hai"] = "vyrox"
     autonomy_mode: Optional[Literal["supervised", "balanced", "higher_autonomy"]] = None
     adaptive_enabled: Optional[bool] = None
+    research_enabled: bool = False
 
 
 class SseLatencyRequest(BaseModel):
@@ -110,7 +157,7 @@ def serialize_step(step: ExecutionStep) -> Dict[str, Any]:
         "approval_reason": step.approval_reason,
         "confidence_basis": step.confidence_basis,
         "uncertainty_notes": step.uncertainty_notes,
-        "sources": json.loads(step.sources_json or "[]"),
+        "sources": normalize_sources(step.sources_json),
         "output_content": step.output_content,
         "partial_output": step.partial_output,
         "completed_stages": json.loads(step.completed_stages_json or "[]"),
@@ -204,6 +251,14 @@ def serialize_task_summary(task: Task) -> Dict[str, Any]:
         "recovery_count": task.recovery_count,
         "plan_edits_count": task.plan_edits_count,
         "total_execution_ms": task.total_execution_ms,
+        "research_enabled": task.research_enabled,
+        "research_status": task.research_status,
+        "research_duration_ms": task.research_duration_ms,
+        "research_used_count": task.research_used_count,
+        "research_retrieved_count": task.research_retrieved_count,
+        "research_used": normalize_sources(task.research_used_json),
+        "research_retrieved": normalize_sources(task.research_retrieved_json),
+        "citation_style": normalize_style(task.citation_style),
         "created_at": task.created_at.isoformat() if task.created_at else None,
         "updated_at": task.updated_at.isoformat() if task.updated_at else None,
         "completed_at": task.completed_at.isoformat() if task.completed_at else None,
@@ -212,14 +267,22 @@ def serialize_task_summary(task: Task) -> Dict[str, Any]:
 
 def serialize_task_detail(task: Task) -> Dict[str, Any]:
     base = serialize_task_summary(task)
+    used_sources = normalize_sources(task.research_used_json)
+    artifact_sections = sorted(task.artifact_sections, key=lambda x: x.section_order)
+    serialized_sections = []
+    for sec in artifact_sections:
+        sec_dict = serialize_section(sec)
+        # Heuristic claim-to-source mapping (never proof of correctness). A section
+        # edited by a human is marked stale until re-verified.
+        has_user_edits = sec.ai_content.strip() != sec.current_content.strip()
+        sec_dict["claims"] = map_claims(sec.current_content, used_sources, stale=has_user_edits)
+        serialized_sections.append(sec_dict)
     base.update(
         {
             "error_message": task.error_message,
             "additional_instructions": json.loads(task.additional_instructions_json or "[]"),
             "steps": [serialize_step(s) for s in sorted(task.steps, key=lambda x: x.step_order)],
-            "artifact_sections": [
-                serialize_section(sec) for sec in sorted(task.artifact_sections, key=lambda x: x.section_order)
-            ],
+            "artifact_sections": serialized_sections,
             "checkpoints": [
                 serialize_checkpoint(cp) for cp in sorted(task.checkpoints, key=lambda x: x.version_number, reverse=True)
             ],

@@ -6,9 +6,10 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from backend.agents.llm_provider import get_agent_provider
+from backend.research.service import research_service
 from backend.autonomy.service import evaluate_step_approval, record_signal_and_adapt
 from backend.checkpoints.service import create_checkpoint
 from backend.core.config import settings
@@ -158,6 +159,58 @@ class ExecutionManager:
                 "task_state_changed",
                 {"status": task.status, "current_activity": task.current_activity},
             )
+
+            # Research phase (only when enabled for this task). Runs once, records
+            # timing separately, and never blocks first output beyond its own timeout.
+            research_context: Optional[str] = None
+            research_used: List[Dict[str, Any]] = []
+            if task.research_enabled:
+                task.current_activity = "Retrieving research sources..."
+                task.research_status = "running"
+                db.commit()
+                sse_broker.publish(
+                    task_id,
+                    "research_status",
+                    {"status": "running", "activity": task.current_activity},
+                )
+                bundle = await research_service.run(task.prompt, True)
+                research_context = bundle.context_str or None
+                research_used = bundle.used
+                task.research_status = bundle.status
+                task.research_duration_ms = bundle.duration_ms
+                # Persist full provenance so used vs. retrieved-but-unused sources
+                # and their honest access status survive the whole workflow.
+                # The deterministic demo generator does not consume live research
+                # context, so in demo mode every source is honestly "retrieved but
+                # not used" rather than falsely presented as used.
+                if provider.provider_mode == "demo":
+                    all_sources = list(bundle.used) + list(bundle.retrieved)
+                    task.research_used_json = json.dumps([])
+                    task.research_retrieved_json = json.dumps(all_sources)
+                    task.research_used_count = 0
+                    task.research_retrieved_count = len(all_sources)
+                else:
+                    task.research_used_json = json.dumps(bundle.used)
+                    task.research_retrieved_json = json.dumps(bundle.retrieved)
+                    task.research_used_count = bundle.used_count
+                    task.research_retrieved_count = bundle.retrieved_count
+                task.current_activity = (
+                    f"Research {bundle.status} ({bundle.used_count} used / {bundle.retrieved_count} additional)."
+                    if bundle.status == "completed"
+                    else f"Research {bundle.status}: {bundle.reason}"
+                )
+                db.commit()
+                sse_broker.publish(
+                    task_id,
+                    "research_status",
+                    {
+                        "status": bundle.status,
+                        "used_count": bundle.used_count,
+                        "retrieved_count": bundle.retrieved_count,
+                        "duration_ms": bundle.duration_ms,
+                        "activity": task.current_activity,
+                    },
+                )
 
             while True:
                 db.expire_all()
@@ -322,7 +375,7 @@ class ExecutionManager:
                     "risk_level": next_step.risk_level,
                     "is_locked": next_step.is_locked,
                     "user_modified": next_step.user_modified,
-                    "sources": json.loads(next_step.sources_json or "[]"),
+                    "sources": research_used or json.loads(next_step.sources_json or "[]"),
                 }
                 completed_stages: List[str] = json.loads(next_step.completed_stages_json or "[]")
                 stages = provider.get_execution_stages(task.topic, step_dict, additional)
@@ -411,6 +464,8 @@ class ExecutionManager:
                     step=step_dict,
                     prior_outputs=prior_outputs,
                     additional_instructions=additional,
+                    research_context=research_context,
+                    research_sources=research_used,
                 )
 
                 elapsed_ms = max(1, int((time.monotonic() - step_t0) * 1000))

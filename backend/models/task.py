@@ -54,6 +54,19 @@ class Task(Base):
     additional_instructions_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    # Research attribution state (Phase 2). Disabled by default.
+    research_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    research_status: Mapped[str] = mapped_column(String(32), default="disabled", nullable=False)
+    research_duration_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    research_used_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    research_retrieved_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Full research provenance (additive, backward compatible). Stored as JSON so
+    # used vs. retrieved-but-unused sources and their honest access status survive
+    # across edits, replanning, checkpoints, and export. Never fabricated.
+    research_used_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    research_retrieved_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    citation_style: Mapped[str] = mapped_column(String(16), default="simple", nullable=False)
+
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     total_execution_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

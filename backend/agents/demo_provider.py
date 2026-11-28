@@ -302,6 +302,8 @@ class DeterministicDemoProvider(AgentProvider):
         step: Dict[str, Any],
         prior_outputs: List[Dict[str, str]],
         additional_instructions: List[str],
+        research_context: Optional[str] = None,
+        research_sources: Optional[List[Dict[str, Any]]] = None,
     ) -> StepExecutionResult:
         t = topic or extract_topic(prompt)
         order = int(step.get("step_order", 1))
