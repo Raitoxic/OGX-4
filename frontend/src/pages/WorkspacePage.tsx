@@ -43,6 +43,8 @@ export const WorkspacePage: React.FC = () => {
 
   const [showNewTaskModal, setShowNewTaskModal] = useState(false);
   const [newPrompt, setNewPrompt] = useState('');
+  const [showInterruptModal, setShowInterruptModal] = useState(false);
+  const [interruptInstruction, setInterruptInstruction] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [newAutonomy, setNewAutonomy] = useState<AutonomyMode>(
     user?.default_autonomy_mode || 'balanced',
@@ -131,6 +133,59 @@ export const WorkspacePage: React.FC = () => {
     }
   }, [loadTasksList, pushToast]);
 
+  const handleInterrupt = useCallback(async (): Promise<void> => {
+    if (!activeTask) return;
+    if (!['RUNNING', 'RESUMING', 'AWAITING_APPROVAL'].includes(activeTask.status)) {
+      pushToast('Interrupt unavailable: task is not currently running or awaiting approval.', 'info');
+      return;
+    }
+    await runAction('interrupt', async () => {
+      const res = await api.interruptTask(activeTask.id);
+      setActiveTask(res.task);
+      pushToast(res.message || 'Task interrupted safely. State preserved.', 'warning');
+      if (res.task.status === 'INTERRUPTED') {
+        setInterruptInstruction('');
+        setShowInterruptModal(true);
+      }
+    });
+  }, [activeTask, runAction, pushToast]);
+
+  const handleInterruptSubmitChanges = async () => {
+    if (!activeTask || !interruptInstruction.trim()) return;
+    setBusyAction('interrupt');
+    try {
+      await api.addInstruction(activeTask.id, interruptInstruction.trim());
+      await api.replanTask(activeTask.id, 'Applied new instructions after interrupt.');
+      setShowInterruptModal(false);
+      setInterruptInstruction('');
+      pushToast('Changes saved. Remaining plan updated for approval; completed steps preserved.', 'success');
+      await fetchTaskDetail(activeTask.id);
+      await loadTasksList();
+    } catch (err) {
+      pushToast(err instanceof Error ? err.message : 'Failed to apply changes.', 'error');
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleInterruptResume = async () => {
+    if (!activeTask) return;
+    setBusyAction('interrupt');
+    try {
+      const resumed = await api.resumeTask(activeTask.id);
+      setActiveTask(resumed);
+      setShowInterruptModal(false);
+      setInterruptInstruction('');
+      pushToast('Resuming from the interruption point without changes.', 'info');
+      await fetchTaskDetail(activeTask.id);
+      await loadTasksList();
+    } catch (err) {
+      pushToast(err instanceof Error ? err.message : 'Failed to resume task.', 'error');
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
   // Listen for Raycast-style ⌘K Command Palette workspace actions
   useEffect(() => {
     const handler = (e: Event) => {
@@ -173,19 +228,7 @@ export const WorkspacePage: React.FC = () => {
           pushToast('Execution paused and checkpoint saved.', 'info');
         });
       } else if (action === 'interrupt') {
-        if (
-          activeTask.status !== 'RUNNING' &&
-          activeTask.status !== 'RESUMING' &&
-          activeTask.status !== 'AWAITING_APPROVAL'
-        ) {
-          pushToast('Interrupt unavailable: task is not currently running or awaiting approval.', 'info');
-          return;
-        }
-        runAction('interrupt', async () => {
-          const res = await api.interruptTask(activeTask.id);
-          setActiveTask(res.task);
-          pushToast(res.message, 'warning');
-        });
+        handleInterrupt();
       } else if (action === 'approve') {
         if (activeTask.status !== 'AWAITING_APPROVAL') {
           pushToast('No pending plan or step approval right now.', 'info');
@@ -199,7 +242,7 @@ export const WorkspacePage: React.FC = () => {
     };
     window.addEventListener('vyrox:workspace-command', handler);
     return () => window.removeEventListener('vyrox:workspace-command', handler);
-  }, [activeTask, runAction, pushToast]);
+  }, [activeTask, runAction, pushToast, handleInterrupt]);
 
   useEffect(() => {
     if (!showNewTaskModal) return;
@@ -461,13 +504,7 @@ export const WorkspacePage: React.FC = () => {
                   pushToast('Execution paused and checkpoint saved.', 'info');
                 })
               }
-              onInterrupt={() =>
-                runAction('interrupt', async () => {
-                  const res = await api.interruptTask(activeTask.id);
-                  setActiveTask(res.task);
-                  pushToast(res.message, 'warning');
-                })
-              }
+              onInterrupt={handleInterrupt}
               onResume={() =>
                 runAction('resume', async () => {
                   const updated = await api.resumeTask(activeTask.id);
@@ -746,6 +783,65 @@ export const WorkspacePage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showInterruptModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setShowInterruptModal(false)}
+        >
+          <div
+            className="w-full max-w-[560px] rounded-2xl border border-apple-borderStrong bg-apple-elevated p-6 shadow-apple-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-[18px] font-semibold tracking-tight text-apple-ink">Task Interrupted</h2>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-apple-secondary">
+                  Execution was safely interrupted. Completed steps, history, shared artifacts, and checkpoints
+                  are preserved. Enter changes to apply, or resume without changes.
+                </p>
+              </div>
+              <span className="shrink-0 rounded-full bg-orange-50 px-2.5 py-0.5 text-[11px] font-medium text-orange-800 dark:bg-orange-950/60 dark:text-orange-300">
+                Interrupted
+              </span>
+            </div>
+
+            <textarea
+              rows={6}
+              value={interruptInstruction}
+              onChange={(e) => setInterruptInstruction(e.target.value)}
+              placeholder="Enter the changes or new instructions you want to apply..."
+              className="mt-4 w-full resize-y rounded-xl border border-apple-border bg-apple-bg px-3.5 py-2.5 text-[13.5px] leading-relaxed text-apple-ink outline-none transition focus:border-apple-blue"
+            />
+
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowInterruptModal(false)}
+                className="rounded-full border border-apple-border px-4 py-1.5 text-[12.5px] font-medium text-apple-secondary transition hover:bg-apple-surface"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={busyAction !== null}
+                onClick={handleInterruptResume}
+                className="rounded-full border border-apple-border px-4 py-1.5 text-[12.5px] font-medium text-apple-ink transition hover:bg-apple-surface disabled:opacity-40"
+              >
+                Resume Without Changes
+              </button>
+              <button
+                type="button"
+                disabled={busyAction !== null || !interruptInstruction.trim()}
+                onClick={handleInterruptSubmitChanges}
+                className="apple-pill-primary px-4 py-1.5 text-[12.5px] disabled:opacity-40"
+              >
+                {busyAction === 'interrupt' ? 'Applying...' : 'Submit Changes'}
+              </button>
+            </div>
           </div>
         </div>
       )}

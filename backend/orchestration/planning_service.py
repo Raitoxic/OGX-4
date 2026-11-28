@@ -409,22 +409,66 @@ async def replan_unlocked_steps(
     db.add(new_plan)
     db.flush()
 
-    for step_obj, spec in zip(mutable, replanned_specs):
-        step_obj.plan_id = new_plan.id
-        step_obj.title = spec.title
-        step_obj.description = spec.description
-        step_obj.rationale = spec.rationale
-        step_obj.expected_outcome = spec.expected_outcome
-        step_obj.risk_level = spec.risk_level
-        step_obj.confidence_basis = spec.confidence_basis
-        step_obj.uncertainty_notes = spec.uncertainty_notes
-        step_obj.sources_json = json.dumps(spec.sources)
-        step_obj.status = StepStatus.PENDING
-        step_obj.approved_by_user = False
-        step_obj.rejected_reason = None
-        step_obj.completed_stages_json = "[]"
-        step_obj.partial_output = ""
-        step_obj.revision_number += 1
+    old_mutable: Dict[int, ExecutionStep] = {s.step_order: s for s in mutable}
+    referenced: set = set()
+    next_order = max((s.step_order for s in steps), default=0)
+    added_count = 0
+    modified_count = 0
+
+    for spec in replanned_specs:
+        change = (spec.replan_change or "").strip().lower()
+        key = spec.step_key
+        if key is not None and key in old_mutable:
+            step_obj = old_mutable[key]
+            referenced.add(key)
+            step_obj.plan_id = new_plan.id
+            step_obj.title = spec.title
+            step_obj.description = spec.description
+            step_obj.rationale = spec.rationale
+            step_obj.expected_outcome = spec.expected_outcome
+            step_obj.risk_level = spec.risk_level
+            step_obj.confidence_basis = spec.confidence_basis
+            step_obj.uncertainty_notes = spec.uncertainty_notes
+            step_obj.sources_json = json.dumps(spec.sources)
+            step_obj.status = StepStatus.PENDING
+            step_obj.approved_by_user = False
+            step_obj.rejected_reason = None
+            step_obj.completed_stages_json = "[]"
+            step_obj.partial_output = ""
+            step_obj.replan_change = change if change in ("modified", "unchanged") else "modified"
+            step_obj.revision_number += 1
+            if step_obj.replan_change == "modified":
+                modified_count += 1
+        else:
+            next_order += 1
+            db.add(
+                ExecutionStep(
+                    task_id=task.id,
+                    plan_id=new_plan.id,
+                    step_order=next_order,
+                    title=spec.title,
+                    description=spec.description,
+                    rationale=spec.rationale,
+                    expected_outcome=spec.expected_outcome,
+                    risk_level=spec.risk_level,
+                    status=StepStatus.PENDING,
+                    requires_approval=False,
+                    confidence_basis=spec.confidence_basis,
+                    uncertainty_notes=spec.uncertainty_notes,
+                    sources_json=json.dumps(spec.sources),
+                    replan_change="added",
+                )
+            )
+            added_count += 1
+
+    # Pending steps dropped from the revised plan are marked removed (never executed).
+    removed_count = 0
+    for key, step_obj in old_mutable.items():
+        if key not in referenced:
+            step_obj.status = StepStatus.REJECTED
+            step_obj.replan_change = "removed"
+            step_obj.rejected_reason = "Removed during replan per new instructions."
+            removed_count += 1
 
     db.flush()
     db.refresh(task)
@@ -441,8 +485,8 @@ async def replan_unlocked_steps(
     task.status = TaskStatus.AWAITING_APPROVAL
     task.plan_approved = False
     task.current_activity = (
-        f"Replanned {len(mutable)} unlocked step(s); preserved {len(preserved)} completed/locked step(s). "
-        f"Review and approve or resume."
+        f"Replanned: {modified_count} modified, {added_count} added, {removed_count} removed; "
+        f"preserved {len(preserved)} completed/locked step(s). Review and approve the revised plan."
     )
 
     record_event(
@@ -451,8 +495,17 @@ async def replan_unlocked_steps(
         user_id=user.id,
         event_type="REPLAN_EXECUTED",
         actor="agent",
-        summary=f"Replanned {len(mutable)} unlocked step(s) while preserving {len(preserved)} locked/completed step(s).",
-        payload={"reason": reason, "mutable_count": len(mutable), "preserved_count": len(preserved)},
+        summary=(
+            f"Replanned unlocked steps ({modified_count} modified, {added_count} added, {removed_count} removed) "
+            f"while preserving {len(preserved)} locked/completed step(s)."
+        ),
+        payload={
+            "reason": reason,
+            "modified_count": modified_count,
+            "added_count": added_count,
+            "removed_count": removed_count,
+            "preserved_count": len(preserved),
+        },
     )
     create_checkpoint(
         db,

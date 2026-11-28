@@ -18,6 +18,7 @@ from backend.core.security import get_current_user, get_current_user_and_token
 from backend.database.session import get_db
 from backend.models.user import User
 from backend.research.citations import VALID_STYLES, normalize_style
+from backend.research.pdf_ingest import ensure_ingested, list_documents
 from backend.research.service import research_service
 from backend.schemas.task import normalize_sources
 
@@ -36,10 +37,21 @@ class CitationStyleRequest(BaseModel):
 @router.post("/preview")
 async def preview_research(
     payload: ResearchPreviewRequest,
-    _user: User = Depends(get_current_user_and_token),
-    _db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_and_token),
+    db: Session = Depends(get_db),
 ) -> dict:
     bundle = await research_service.run(payload.prompt, bool(payload.enabled))
+    if bundle.status == "completed":
+        from backend.research.retrieval_log import log_retrieval
+
+        backend = "semantic" if "semantic" in bundle.providers else "lexical"
+        log_retrieval(
+            db,
+            bundle.query or payload.prompt,
+            backend,
+            bundle.used + bundle.retrieved,
+            top_score=0.0,
+        )
     return {
         "status": bundle.status,
         "reason": bundle.reason,
@@ -91,3 +103,36 @@ def set_citation_style(
     task.citation_style = style
     db.commit()
     return {"task_id": task.id, "citation_style": normalize_style(task.citation_style)}
+
+
+@router.get("/pdfs")
+def list_pdfs(
+    _current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """List ingested local PDF dataset documents and processing status."""
+    ensure_ingested(db)
+    docs = list_documents(db)
+    indexed = [d for d in docs if d["status"] == "indexed"]
+    return {
+        "documents": docs,
+        "indexed_count": len(indexed),
+        "total_count": len(docs),
+        "total_chunks": sum(d["chunk_count"] for d in indexed),
+    }
+
+
+@router.post("/pdfs/ingest")
+def ingest_pdfs(
+    _current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Trigger (re)ingestion of the local PDF dataset. Idempotent."""
+    docs = ensure_ingested(db)
+    indexed = [d for d in docs if d["status"] == "indexed"]
+    return {
+        "documents": docs,
+        "indexed_count": len(indexed),
+        "total_count": len(docs),
+        "total_chunks": sum(d["chunk_count"] for d in indexed),
+    }

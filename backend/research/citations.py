@@ -25,6 +25,7 @@ ACCESS_STATUS_LABELS: Dict[str, str] = {
     "retrieved_full": "Full text accessed",
     "retrieved_partial": "Abstract / partial accessed",
     "abstract_accessed": "Abstract accessed (not full text)",
+    "pdf_excerpt": "PDF excerpt accessed",
     "metadata_only": "Metadata only — not retrieved",
     "demo_metadata_only": "Demo metadata — not retrieved",
     "user_provided": "User-provided",
@@ -76,6 +77,15 @@ def _url(source: Dict[str, Any]) -> str:
     return ""
 
 
+def _locator(source: Dict[str, Any]) -> str:
+    """Local PDF locator: 'filename, p. N' (only when actually known)."""
+    filename = _clean(source.get("filename"))
+    page = source.get("page")
+    if filename and page not in (None, ""):
+        return f"{filename}, p. {page}"
+    return filename
+
+
 def _doi_line(source: Dict[str, Any]) -> str:
     doi = _doi(source)
     if not doi:
@@ -115,6 +125,9 @@ def format_reference(source: Dict[str, Any], style: Optional[str], n: int) -> st
         y = f"{year}." if year else ""
         raw = f"[{n}] {title}. {v}{y}{doi_line}{url_line}"
 
+    loc = _locator(source)
+    if loc:
+        raw = f"{raw} ({loc})"
     return " ".join(raw.split()).strip()
 
 
@@ -166,6 +179,9 @@ def build_references_markdown(used_sources: List[Dict[str, Any]], style: Optiona
         if _clean(s.get("provider")):
             detail.append(f"Provider: {_clean(s.get('provider'))}")
         detail.append(f"Access: {access_label(s)}")
+        loc = _locator(s)
+        if loc:
+            detail.append(f"Source file: {loc}")
         if _doi(s):
             doi = _doi(s)
             detail.append(f"DOI: {doi if doi.lower().startswith('http') else f'https://doi.org/{doi}'}")
@@ -182,7 +198,14 @@ def build_additional_markdown(retrieved_sources: List[Dict[str, Any]]) -> str:
     lines = [f"### {ADDITIONAL_HEADING}", ""]
     for s in additional:
         provider = _clean(s.get("provider"))
-        lines.append(f"- {_title(s)}{f' — {provider}' if provider else ''} ({access_label(s)})")
+        loc = _locator(s)
+        line = f"- {_title(s)}"
+        if provider:
+            line += f" — {provider}"
+        if loc:
+            line += f" ({loc})"
+        line += f" [{access_label(s)}]"
+        lines.append(line)
     return "\n".join(lines)
 
 

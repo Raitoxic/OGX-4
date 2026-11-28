@@ -180,6 +180,8 @@ class ExecutionStep(Base):
     user_edit_note: Mapped[str] = mapped_column(Text, default="", nullable=False)
     rejected_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     revision_number: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    # Replan diff marker: "" | added | modified | removed | unchanged
+    replan_change: Mapped[str] = mapped_column(String(16), default="", nullable=False)
 
     duration_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
